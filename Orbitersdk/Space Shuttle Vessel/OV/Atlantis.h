@@ -402,6 +402,7 @@ class Atlantis: public VESSEL4
 		MESHHANDLE hOrbiterMesh;
 		MESHHANDLE hOrbiterVCExternalMesh;
 		MESHHANDLE hOrbiterVCMesh;
+		MESHHANDLE hOrbiterVCModMesh;
 		MESHHANDLE hMidDeckMesh;
 		MESHHANDLE hVerticalTailMesh;
 		MESHHANDLE hOMSKitMesh;

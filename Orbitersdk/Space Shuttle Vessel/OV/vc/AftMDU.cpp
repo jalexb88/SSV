@@ -79,49 +79,13 @@ namespace vc
 		if (!bHasMEDS)
 		{
 			int MM = STS()->GetGPCMajorMode();
-			VECTOR3 atterr;
-			//ADI
-			VECTOR3 av;// x = pitch, y = yaw, z = roll
-			STS()->GetAngularVel(av);
-			av *= DEG;
-			av.z = -av.z;
-			av.x = -av.x;
 
-			switch (MM)
+			if (MM != 201 && MM != 202 && MM != 801)
 			{
-			case 101:
-			case 102:
-			case 103:
-			case 104:
-			case 105:
-			case 106:
-				atterr = pAFD->GetIDP()->GetAttitudeErrors_AscentDAP();
-				break;
-			case 201:
-			case 202:
-			case 801:
-				atterr = pAFD->GetIDP()->GetAttitudeCommandErrors();
-				break;
-			case 301:
-			case 302:
-			case 303:
-			case 304:
-			case 305:
-				atterr = pAFD->GetIDP()->GetAttitudeErrors_AerojetDAP();
-				break;
-			case 601:
-				atterr = pAFD->GetIDP()->GetAttitudeErrors_AscentDAP();
-				break;
-			case 602:
-			case 603:
-			case 901:
-				atterr = pAFD->GetIDP()->GetAttitudeErrors_AerojetDAP();
-				break;
-				break;
-			default:
-				break;
+				return;
 			}
 
+			//ADI
 			double attRoll = -STS()->GetBank();
 			double attPitch = STS()->GetPitch();
 			double attYaw = STS()->GetSlipAngle();
@@ -142,6 +106,11 @@ namespace vc
 			STS()->SetAnimation(anim_adiY, attYaw / 360.0 * DEG);
 
 			// Rate needles
+			VECTOR3 av;// x = pitch, y = yaw, z = roll
+			STS()->GetAngularVel(av);
+			av *= DEG;
+			av.z = -av.z;
+			av.x = -av.x;
 			int adirate = pAFD->GetIDP()->GetADIRate();
 			double maxRate = (adirate == 1) ? 5.0 : (adirate == 2) ? 10.0 : 1.0;
 
@@ -150,6 +119,7 @@ namespace vc
 			STS()->SetAnimation(anim_needle_YawRateCDR, max(0.0, min(1.0, 0.5 + av.y / (2.0 * maxRate))));
 
 			// Error needles
+			VECTOR3 atterr = pAFD->GetIDP()->GetAttitudeCommandErrors();
 			int adierr = pAFD->GetIDP()->GetADIError();
 			double maxRate2 = (adierr == 1) ? 5.0 : (adierr == 2) ? 10.0 : 1.0;
 

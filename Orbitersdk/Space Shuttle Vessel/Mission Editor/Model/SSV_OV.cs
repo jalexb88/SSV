@@ -2171,7 +2171,6 @@ namespace SSVMissionEditor.Model
 					panelobject.param_val.Add( Tuple.Create( "PORT_SEL", "PRI" ) );
 					panelobject.param_val.Add( Tuple.Create( "BRIGHTNESS", "0.800000" ) );
 					panelblock.obj.Add( panelobject );
-					panelblock.switch_pos.Add( Tuple.Create( "FLT CNTLR POWER", "OFF" ) );
 					panelblock.switch_pos.Add( Tuple.Create( "ADI ATTITUDE", "REF" ) );
 					panelblock.switch_pos.Add( Tuple.Create( "ADI ERROR", "MED" ) );
 					panelblock.switch_pos.Add( Tuple.Create( "ADI RATE", "MED" ) );
@@ -2180,7 +2179,11 @@ namespace SSVMissionEditor.Model
 					panelblock.switch_pos.Add( Tuple.Create( "HUD MODE", "NORM" ) );
 					panelblock.switch_pos.Add( Tuple.Create( "HUD BRIGHTNESS", "0.500000" ) );
 					panelblock.switch_pos.Add( Tuple.Create( "HUD BRIGHT", "AUTO" ) );
-					panelblock.switch_pos.Add( Tuple.Create( "RDR ALTM", "1" ) );
+					if (mission.OV.FlightDeck == "MEDS")
+				        {
+						panelblock.switch_pos.Add(Tuple.Create("FLT CNTLR POWER", "OFF"));
+						panelblock.switch_pos.Add(Tuple.Create("RDR ALTM", "1"));
+					}
 					break;
 				case MissionPhase.LaunchT20m:
 					break;
@@ -2200,7 +2203,6 @@ namespace SSVMissionEditor.Model
 					panelobject.param_val.Add( Tuple.Create( "PORT_SEL", "PRI" ) );
 					panelobject.param_val.Add( Tuple.Create( "BRIGHTNESS", "0.800000" ) );
 					panelblock.obj.Add( panelobject );
-					panelblock.switch_pos.Add( Tuple.Create( "FLT CNTLR POWER", "ON" ) );
 					panelblock.switch_pos.Add( Tuple.Create( "ADI ATTITUDE", "REF" ) );
 					panelblock.switch_pos.Add( Tuple.Create( "ADI ERROR", "MED" ) );
 					panelblock.switch_pos.Add( Tuple.Create( "ADI RATE", "MED" ) );
@@ -2209,7 +2211,11 @@ namespace SSVMissionEditor.Model
 					panelblock.switch_pos.Add( Tuple.Create( "HUD MODE", "NORM" ) );
 					panelblock.switch_pos.Add( Tuple.Create( "HUD BRIGHTNESS", "0.500000" ) );
 					panelblock.switch_pos.Add( Tuple.Create( "HUD BRIGHT", "AUTO" ) );
-					panelblock.switch_pos.Add( Tuple.Create( "RDR ALTM", "1" ) );
+					if (mission.OV.FlightDeck == "MEDS")
+				        {
+						panelblock.switch_pos.Add(Tuple.Create("FLT CNTLR POWER", "ON"));
+						panelblock.switch_pos.Add(Tuple.Create("RDR ALTM", "1"));
+					}
 					break;
 			}
 
@@ -2261,6 +2267,11 @@ namespace SSVMissionEditor.Model
 					panelobject.param_val.Add( Tuple.Create( "BRIGHTNESS", "0.800000" ) );
 					panelblock.obj.Add( panelobject );
 					panelblock.switch_pos.Add( Tuple.Create( "EVENT TIME", "0 0.000000 0 1" ) );
+					if (mission.OV.FlightDeck == "MCDS")
+				        {
+						panelblock.switch_pos.Add(Tuple.Create("FLT CNTLR POWER", "OFF"));
+						panelblock.switch_pos.Add(Tuple.Create("RDR ALTM", "1"));
+					}
 					break;
 				case MissionPhase.LaunchT20m:
 					break;
@@ -2301,6 +2312,11 @@ namespace SSVMissionEditor.Model
 					panelobject.param_val.Add( Tuple.Create( "BRIGHTNESS", "0.800000" ) );
 					panelblock.obj.Add( panelobject );
 					panelblock.switch_pos.Add( Tuple.Create( "EVENT TIME", EventTimer( -(9 * 60) - Defs.SCN_TIME_OFFSET, true, false ) ) );
+					if (mission.OV.FlightDeck == "MCDS")
+				        {
+						panelblock.switch_pos.Add(Tuple.Create("FLT CNTLR POWER", "ON"));
+						panelblock.switch_pos.Add(Tuple.Create("RDR ALTM", "1"));
+					}
 					break;
 				case MissionPhase.LaunchT31s:
 					panelobject = new SSVscnObject{name = "CRT1", param_val = new List<Tuple<string,string>>()};
@@ -2339,6 +2355,11 @@ namespace SSVMissionEditor.Model
 					panelobject.param_val.Add( Tuple.Create( "BRIGHTNESS", "0.800000" ) );
 					panelblock.obj.Add( panelobject );
 					panelblock.switch_pos.Add( Tuple.Create( "EVENT TIME", EventTimer( -31 - Defs.SCN_TIME_OFFSET, true, false ) ) );
+					if (mission.OV.FlightDeck == "MCDS")
+				        {
+						panelblock.switch_pos.Add(Tuple.Create("FLT CNTLR POWER", "ON"));
+						panelblock.switch_pos.Add(Tuple.Create("RDR ALTM", "1"));
+					}
 					break;
 			}
 
@@ -3566,6 +3587,8 @@ namespace SSVMissionEditor.Model
 
 		private void SetMFDs_LaunchT9m()
 		{
+			if (mission.OV.FlightDeck == "MEDS")
+			{
 			// CDR 1
 			mfds[0].on = true;
 			mfds[0].type = "User";
@@ -3589,6 +3612,14 @@ namespace SSVMissionEditor.Model
 			mfds[3].type = "User";
 			mfds[3]._params.Clear();
 			mfds[3]._params.Add( "MODE CRT" );
+			}
+			else
+			{
+			mfds[0].on = false;
+			mfds[1].on = false;
+			mfds[2].on = false;
+			mfds[3].on = false;
+			}
 
 			// CRT 1
 			mfds[4].on = true;

@@ -518,48 +518,21 @@ namespace vc {
 		if (!bHasMEDS)
 		{
 			int MM = STS()->GetGPCMajorMode();
-			VECTOR3 atterr;
+			VECTOR3 atterr = _V(0, 0, 0);
 			//ADI
 			VECTOR3 av;// x = pitch, y = yaw, z = roll
 			STS()->GetAngularVel(av);
 			av *= DEG;
 			av.z = -av.z;
 			av.x = -av.x;
-
-			switch (MM)
-			{
-			case 101:
-			case 102:
-			case 103:
-			case 104:
-			case 105:
-			case 106:
-				atterr = pPLT1->GetIDP()->GetAttitudeErrors_AscentDAP();
-				break;
-			case 201:
-			case 202:
-			case 801:
-				atterr = pPLT1->GetIDP()->GetAttitudeCommandErrors();
-				break;
-			case 301:
-			case 302:
-			case 303:
-			case 304:
-			case 305:
-				atterr = pPLT1->GetIDP()->GetAttitudeErrors_AerojetDAP();
-				break;
-			case 601:
-				atterr = pPLT1->GetIDP()->GetAttitudeErrors_AscentDAP();
-				break;
-			case 602:
-			case 603:
-			case 901:
-				atterr = pPLT1->GetIDP()->GetAttitudeErrors_AerojetDAP();
-				break;
-				break;
-			default:
-				break;
-			}
+			VECTOR3 vel;
+			STS()->GetGroundspeedVector(FRAME_HORIZON, vel);
+			vel *= MPS2FPS;
+			int InstActive = 0;
+			double hsiheading, deviation, coursePointer;
+			hsiheading = STS()->GetYaw() - pPLT1->GetIDP()->GetTargetHeading();
+			coursePointer = 0.0;
+			deviation = 0.5;
 
 			double attRoll = STS()->GetBank();
 			double attPitch = STS()->GetPitch();
@@ -577,6 +550,66 @@ namespace vc {
 			if (attYaw >= PI2) attYaw -= PI2;
 			if (attYaw < 0) attYaw += PI2;
 
+			switch (MM)
+			{
+			case 101:
+			case 102:
+			case 103:
+				InstActive = 1;
+				atterr = pPLT1->GetIDP()->GetAttitudeErrors_AscentDAP();
+				coursePointer = -pPLT1->GetIDP()->GetCrossTrack() * RAD;
+				deviation = 0.5 + (STS()->GetSlipAngle());
+				break;
+			case 104:
+			case 105:
+			case 106:
+			case 201:
+			case 202:
+			case 801:
+			case 301:
+			case 302:
+			case 303:
+				atterr = pPLT1->GetIDP()->GetAttitudeCommandErrors();
+				break;
+			case 304:
+				InstActive = 1;
+				attYaw = 0;
+				atterr = pPLT1->GetIDP()->GetAttitudeErrors_AerojetDAP();
+				hsiheading = atan2(vel.x, vel.z);
+				coursePointer = hsiheading - pPLT1->GetIDP()->GetSelectedRunwayHeading() * RAD;
+				break;
+			case 305:
+				InstActive = 1;
+				attYaw = 0;
+				atterr = pPLT1->GetIDP()->GetAttitudeErrors_AerojetDAP();
+				deviation = 0.5 + (pPLT1->GetIDP()->GetCourseDeviation() * RAD) / (2.0 * (pPLT1->GetIDP()->GetCourseDeviationScale() * RAD));
+				coursePointer = STS()->GetYaw() - pPLT1->GetIDP()->GetSelectedRunwayHeading() * RAD;
+				break;
+			case 601:
+				InstActive = 1;
+				atterr = pPLT1->GetIDP()->GetAttitudeErrors_AscentDAP();
+				deviation = 0.5 + (STS()->GetSlipAngle());
+				break;
+			case 602:
+				InstActive = 1;
+				attYaw = 0;
+				atterr = pPLT1->GetIDP()->GetAttitudeErrors_AerojetDAP();
+				hsiheading = atan2(vel.x, vel.z);
+				coursePointer = hsiheading - pPLT1->GetIDP()->GetSelectedRunwayHeading() * RAD;
+				break;
+			case 603:
+				InstActive = 1;
+				attYaw = 0;
+				atterr = pPLT1->GetIDP()->GetAttitudeErrors_AerojetDAP();
+				deviation = 0.5 + (pPLT1->GetIDP()->GetCourseDeviation() * RAD) / (2.0 * (pPLT1->GetIDP()->GetCourseDeviationScale() * RAD));
+				coursePointer = STS()->GetYaw() - pPLT1->GetIDP()->GetSelectedRunwayHeading() * RAD;
+				break;
+			case 901:
+				break;
+			default:
+				break;
+			}
+
 			STS()->SetAnimation(anim_adiR, attRoll / 360.0 * DEG);
 			STS()->SetAnimation(anim_adiP, attPitch / 360.0 * DEG);
 			STS()->SetAnimation(anim_adiY, attYaw / 360.0 * DEG);
@@ -586,7 +619,7 @@ namespace vc {
 			double maxRate = (adirate == 1) ? 5.0 : (adirate == 2) ? 10.0 : 1.0;
 
 			STS()->SetAnimation(anim_needle_RollRateCDR, max(0.0, min(1.0, 0.5 + av.z / (2.0 * maxRate))));
-			STS()->SetAnimation(anim_needle_PitchRateCDR, max(0.0, min(1.0, 0.5 + av.x / (2.0 * maxRate))));
+			STS()->SetAnimation(anim_needle_PitchRateCDR, max(0.0, min(1.0, 0.5 + -av.x / (2.0 * maxRate))));
 			STS()->SetAnimation(anim_needle_YawRateCDR, max(0.0, min(1.0, 0.5 + av.y / (2.0 * maxRate))));
 
 			// Error needles
@@ -594,8 +627,48 @@ namespace vc {
 			double maxRate2 = (adierr == 1) ? 5.0 : (adierr == 2) ? 10.0 : 1.0;
 
 			STS()->SetAnimation(anim_needle_RollErrorCDR, max(0.0, min(1.0, 0.5 + atterr.z / (2.0 * maxRate2))));
-			STS()->SetAnimation(anim_needle_PitchErrorCDR, max(0.0, min(1.0, 0.5 + atterr.x / (2.0 * maxRate2))));
+			STS()->SetAnimation(anim_needle_PitchErrorCDR, max(0.0, min(1.0, 0.5 + -atterr.x / (2.0 * maxRate2))));
 			STS()->SetAnimation(anim_needle_YawErrorCDR, max(0.0, min(1.0, 0.5 + atterr.y / (2.0 * maxRate2))));
+
+			//HYDRAULIC
+			unsigned short Qty[3];
+			unsigned short Press[3];
+			pPLT1->GetIDP()->GetHYDdata(Qty[0], Qty[1], Qty[2], Press[0], Press[1], Press[2]);
+
+			for (int i = 0; i < 3; i++) if (Qty[i] > 100.0) Qty[i] = 100.0;
+
+			STS()->SetAnimation(anim_needle_hyd_qty_1, Qty[0] / 100.0);
+			STS()->SetAnimation(anim_needle_hyd_qty_2, Qty[1] / 100.0);
+			STS()->SetAnimation(anim_needle_hyd_qty_3, Qty[2] / 100.0);
+
+			for (int i = 0; i < 3; i++) if (Press[i] > 4000.0) Press[i] = 4000.0;
+
+			STS()->SetAnimation(anim_needle_hyd_press_1, Press[0] / 4000.0);
+			STS()->SetAnimation(anim_needle_hyd_press_2, Press[1] / 4000.0);
+			STS()->SetAnimation(anim_needle_hyd_press_3, Press[2] / 4000.0);
+
+			//APU
+			unsigned short FuQty[3];
+			unsigned short Fu_Press[3];
+			unsigned short H2OQty[3];
+			unsigned short OilIn[3];
+			pPLT1->GetIDP()->GetAPUdata(FuQty[0], FuQty[1], FuQty[2], Fu_Press[0], Fu_Press[1], Fu_Press[2], H2OQty[0], H2OQty[1], H2OQty[2], OilIn[0], OilIn[1], OilIn[2]);
+
+			for (int i = 0; i < 3; i++) if (FuQty[i] > 100.0) FuQty[i] = 100.0;
+			STS()->SetAnimation(anim_needle_fuel_qty_1, FuQty[0] / 100.0);
+			STS()->SetAnimation(anim_needle_fuel_qty_2, FuQty[1] / 100.0);
+			STS()->SetAnimation(anim_needle_fuel_qty_3, FuQty[2] / 100.0);
+
+			for (int i = 0; i < 3; i++) if (Fu_Press[i] > 500.0) Fu_Press[i] = 500.0;
+			STS()->SetAnimation(anim_needle_apu_fuel_press, Fu_Press[0] / 500.0);
+
+			for (int i = 0; i < 3; i++) if (OilIn[i] > 500.0) OilIn[i] = 500.0;
+			STS()->SetAnimation(anim_needle_apu_oil_temp, OilIn[0] / 500.0);
+
+			if (!InstActive)
+			{
+				return;
+			}
 
 			// Tapemeters
 			// Alpha
@@ -687,9 +760,7 @@ namespace vc {
 			//KT tapemeter
 			if (hF8_dev && !ktVtx.empty())
 			{
-				VECTOR3 vel;
-				STS()->GetAirspeedVector(FRAME_LOCAL, vel);
-				double airspeed = length(vel) * 1.943844; // knots (kt)
+				double airspeed = sqrt(STS()->GetDynPressure() * PA2PSF) * 17.18; // knots (kt)
 
 				GROUPEDITSPEC ges = {};
 				ges.flags = GRPEDIT_VTXTEX;
@@ -737,7 +808,9 @@ namespace vc {
 			//Alt tapemeter
 			if (hF8_dev && !altVtx.empty())
 			{
-				double Altitude_ft = STS()->GetAltitude() * MPS2FPS;
+				double Altitude_ft;
+				if (MM == 304 || MM == 305 || MM == 602 || MM == 603) Altitude_ft = pPLT1->GetIDP()->GetAltitude();
+				else Altitude_ft = STS()->GetAltitude() * MPS2FPS;
 
 				GROUPEDITSPEC ges = {};
 				ges.flags = GRPEDIT_VTXTEX;
@@ -798,69 +871,34 @@ namespace vc {
 			double limitedAlt = (altAcc < -10.0) ? -10.0 : ((altAcc > 10.0) ? 10.0 : altAcc);
 			STS()->SetAnimation(anim_needle_alt, (limitedAlt + 10.0) / 20.0);
 
-			//HYDRAULIC
-			unsigned short Qty[3];
-			unsigned short Press[3];
-			pPLT1->GetIDP()->GetHYDdata(Qty[0], Qty[1], Qty[2], Press[0], Press[1], Press[2]);
-
-			for (int i = 0; i < 3; i++) if (Qty[i] > 100.0) Qty[i] = 100.0;
-
-			STS()->SetAnimation(anim_needle_hyd_qty_1, Qty[0] / 100.0);
-			STS()->SetAnimation(anim_needle_hyd_qty_2, Qty[1] / 100.0);
-			STS()->SetAnimation(anim_needle_hyd_qty_3, Qty[2] / 100.0);
-
-			for (int i = 0; i < 3; i++) if (Press[i] > 4000.0) Press[i] = 4000.0;
-
-			STS()->SetAnimation(anim_needle_hyd_press_1, Press[0] / 4000.0);
-			STS()->SetAnimation(anim_needle_hyd_press_2, Press[1] / 4000.0);
-			STS()->SetAnimation(anim_needle_hyd_press_3, Press[2] / 4000.0);
-
-			//APU
-			unsigned short FuQty[3];
-			unsigned short Fu_Press[3];
-			unsigned short H2OQty[3];
-			unsigned short OilIn[3];
-			pPLT1->GetIDP()->GetAPUdata(FuQty[0], FuQty[1], FuQty[2], Fu_Press[0], Fu_Press[1], Fu_Press[2], H2OQty[0], H2OQty[1], H2OQty[2], OilIn[0], OilIn[1], OilIn[2]);
-
-			for (int i = 0; i < 3; i++) if (FuQty[i] > 100.0) FuQty[i] = 100.0;
-			STS()->SetAnimation(anim_needle_fuel_qty_1, FuQty[0] / 100.0);
-			STS()->SetAnimation(anim_needle_fuel_qty_2, FuQty[1] / 100.0);
-			STS()->SetAnimation(anim_needle_fuel_qty_3, FuQty[2] / 100.0);
-
-			for (int i = 0; i < 3; i++) if (Fu_Press[i] > 500.0) Fu_Press[i] = 500.0;
-			STS()->SetAnimation(anim_needle_apu_fuel_press, Fu_Press[0] / 500.0);
-
-			for (int i = 0; i < 3; i++) if (OilIn[i] > 500.0) OilIn[i] = 500.0;
-			STS()->SetAnimation(anim_needle_apu_oil_temp, OilIn[0] / 500.0);
-
 			//HSI
-                        //Compass Card
-			double hsiheading, roll, deviation, bearing, course, scale, primaryBearing, secondaryBearing, gsiDeviation;
-			course = STS()->GetYaw();
-			hsiheading = STS()->GetYaw() - pPLT1->GetIDP()->GetTargetHeading();
+			//Compass Card
+			double roll, gs_scale, primaryBearing, secondaryBearing, gsiDeviation;
 			roll = STS()->GetBank();
-			bearing = pPLT1->GetIDP()->GetSelectedRunwayHeading() * RAD;
-			deviation = pPLT1->GetIDP()->GetCourseDeviation() * RAD;
-			scale = pPLT1->GetIDP()->GetCourseDeviationScale();
+			gs_scale = pPLT1->GetIDP()->GetGlideSlopeDeviationScale();
 			primaryBearing = pPLT1->GetIDP()->GetPrimaryBearing() * RAD;
 			secondaryBearing = pPLT1->GetIDP()->GetSecondaryBearing() * RAD;
 			gsiDeviation = pPLT1->GetIDP()->GetGlideSlopeDeviation();
 
-			double sgn = sign((90 * RAD) - fabs(roll));
+			/*double sgn = sign((90 * RAD) - fabs(roll));
+			hsiheading *= sgn;
+			coursePointer *= sgn;*/
 
-			double coursePointer = course - bearing;
+			if (hsiheading >= PI2) hsiheading -= PI2;
+			if (hsiheading < 0) hsiheading += PI2;
 			if (coursePointer >= PI2) coursePointer -= PI2;
 			if (coursePointer < 0) coursePointer += PI2;
+			if (primaryBearing >= PI2) primaryBearing -= PI2;
+			if (primaryBearing < 0) primaryBearing += PI2;
+			if (secondaryBearing >= PI2) secondaryBearing -= PI2;
+			if (secondaryBearing < 0) secondaryBearing += PI2;
 
-			//if (deviation >= PI2) deviation -= PI2;
-			//if (deviation < 0) deviation += PI2;
-
-			STS()->SetAnimation(anim_compass_card, (hsiheading * sgn) / PI2);
-			STS()->SetAnimation(anim_course_pointer, (coursePointer) / PI2);
-			STS()->SetAnimation(anim_hsi_cdi, 0.5 + deviation / (2.0 * scale * RAD));
+			STS()->SetAnimation(anim_compass_card, hsiheading / PI2);
+			STS()->SetAnimation(anim_course_pointer, coursePointer / PI2);
+			STS()->SetAnimation(anim_hsi_cdi, deviation);
 			STS()->SetAnimation(anim_primary_bearing, primaryBearing / PI2);
 			STS()->SetAnimation(anim_secondary_bearing, secondaryBearing / PI2);
-			STS()->SetAnimation(anim_needle_gs, (5000.0 - gsiDeviation) / 10000.0);
+			STS()->SetAnimation(anim_needle_gs, (gs_scale - gsiDeviation) / (gs_scale * 2));
 		}
 	}
 
